@@ -1,4 +1,27 @@
-# Landmark2019-1st-and-3rd-Place-Solution
+# ENGN8501 Advcaned Computer Vision Final Project
+# Google Landmark Challenge 2020
+
+### Train this code:
+* Download the 2020 Dataset, this is also known as GLDv2-Clean Dataset:https://www.kaggle.com/c/landmark-recognition-2020/data. The file downloaded is a zipped file at 97.6GB, so during the unzipping process it will take 2 times the space at most. Make sure you have enough space on your disk.
+* Clone this repo
+```
+git clone https://github.com/skyguidance/ENGN8501-Landmark-2020.git
+git checkout master
+```
+* Modify the dataset connecter and connect the dataset on your drive by changing the "src/dataset_connector.py" file.
+* Train the network from scratch. The devices switch works as a CUDA visible mask. When training, the log will automatically write to the result folder, and the model will be automatically saved on every epoch.
+```
+python exp\v2clean.py job --devices="0,1,2,......."
+```
+
+### Collaborator:
+```
+Work in Progress...
+```
+
+### Reference: 
+This code is based on https://github.com/lyakaap/Landmark2019-1st-and-3rd-Place-Solution. Original README stated below.
+### Landmark2019-1st-and-3rd-Place-Solution
 
 ![pipeline](https://user-images.githubusercontent.com/27487010/69476665-0858c880-0e20-11ea-9fb4-5292f61e9c12.png)
 
