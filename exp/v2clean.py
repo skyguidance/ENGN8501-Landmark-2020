@@ -16,10 +16,11 @@ import torch.optim as optim
 import torch.utils.data
 from sklearn.model_selection import ParameterGrid, ParameterSampler
 from tqdm import tqdm
-
+from src import dataset_connector
 import debug
 from src import qsub
-from src import utils, data_utils, metrics
+from src import utils, metrics
+from src import data_utils_GLD2020 as data_utils
 from src.eval_retrieval import eval_datasets
 from src.modeling import batch_norm, models
 
@@ -27,12 +28,13 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + '/'
 
 params = {
     'ex_name': __file__.replace('.py', ''),
+    'class_topk': 1000,
     'seed': 123456789,
     'lr': 1e-3,
     'batch_size': 32,
     'test_batch_size': 64,
     'optimizer': 'momentum',
-    'epochs': 5,
+    'epochs': 30,
     'scaleup_epochs': 0,
     'wd': 1e-5,
     'model_name': 'resnet101',
@@ -87,9 +89,9 @@ def job(tuning, params_path, devices, resume, save_interval):
         mode_str = 'train'
         setting = ''
 
-    exp_path = ROOT + f'exp/{params["ex_name"]}/'
+    exp_path = os.path.join(dataset_connector.result_dir, f'{params["ex_name"]}/')
     os.environ['CUDA_VISIBLE_DEVICES'] = devices
-
+    print("CUDA Available:", torch.cuda.is_available(), "CUDA_VISIBLE_DEVICES:", os.environ['CUDA_VISIBLE_DEVICES'])
     logger, writer = utils.get_logger(log_dir=exp_path + f'{mode_str}/log/{setting}',
                                       tensorboard_dir=exp_path + f'{mode_str}/tf_board/{setting}')
 
@@ -118,8 +120,8 @@ def job(tuning, params_path, devices, resume, save_interval):
         train_transform=train_transform,
         eval_transform=eval_transform,
         scale='S2',
-        test_size=0,
-        num_workers=8)
+        test_size=0.1,
+        num_workers=os.cpu_count())
 
     model = models.LandmarkNet(n_classes=params['class_topk'],
                                model_name=params['model_name'],
@@ -135,9 +137,10 @@ def job(tuning, params_path, devices, resume, save_interval):
     criterion = nn.CrossEntropyLoss()
     optimizer = utils.get_optim(params, model)
 
-    sdict = torch.load(ROOT + params['base_ckpt_path'])['state_dict']
-    del sdict['final.weight']  # remove fully-connected layer
-    model.load_state_dict(sdict, strict=False)
+    # TODO: Missing initial weight file.
+    # sdict = torch.load(ROOT + params['base_ckpt_path'])['state_dict']
+    # del sdict['final.weight']  # remove fully-connected layer
+    # model.load_state_dict(sdict, strict=False)
 
     scheduler = optim.lr_scheduler.CosineAnnealingLR(
         optimizer, T_max=params['epochs'] * len(data_loaders['train']), eta_min=3e-6)
@@ -169,12 +172,13 @@ def job(tuning, params_path, devices, resume, save_interval):
             optimizer.step()
             scheduler.step()
 
+
             acc = metrics.accuracy(outputs, y)
             losses.update(loss.item(), x.size(0))
             prec1.update(acc, x.size(0))
-
+            logger.info("Training Loss:{},Accuracy(Prec1):{}".format(loss.item(), acc))
             if i % 100 == 99:
-                logger.info(f'{epoch+i/len(data_loaders["train"]):.2f}epoch | {setting} acc: {prec1.avg}')
+                logger.info(f'{epoch + i / len(data_loaders["train"]):.2f}epoch | {setting} acc: {prec1.avg}')
 
         train_loss = losses.avg
         train_acc = prec1.avg
@@ -216,7 +220,6 @@ def job(tuning, params_path, devices, resume, save_interval):
 @click.option('--n-blocks', '-n', type=int, default=1)
 @click.option('--block-id', '-i', type=int, default=0)
 def tuning(mode, n_iter, n_gpu, devices, save_interval, n_blocks, block_id):
-
     if n_gpu == -1:
         n_gpu = len(devices.split(','))
 
@@ -253,7 +256,6 @@ def tuning(mode, n_iter, n_gpu, devices, save_interval, n_blocks, block_id):
 @click.option('--n-blocks', '-n', type=int, default=1)
 @click.option('--block-id', '-i', type=int, default=0)
 def predict(model_path, devices, ms, scale, batch_size, splits, n_blocks, block_id):
-
     os.environ['CUDA_VISIBLE_DEVICES'] = devices
 
     ckpt = torch.load(model_path)
@@ -401,7 +403,6 @@ def launch_qsub(job_type,
 @click.option('--batch-size', '-b', type=int, default=64)
 @click.option('--splits', type=str, default='index,test')
 def multigpu_predict(devices, model_path, ms, scale, batch_size, splits):
-
     devices = devices.split(',')
 
     procs = []
