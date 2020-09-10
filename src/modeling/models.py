@@ -40,7 +40,7 @@ class LandmarkNet(nn.Module):
         final_in_features = self.backbone.last_linear.in_features
         # HACK: work around for this issue https://github.com/Cadene/pretrained-models.pytorch/issues/120
         self.backbone = nn.Sequential(*list(self.backbone.children())[:-2])
-
+        # TODO:CompactBilinearPooling
         self.pooling = getattr(cirtorch.pooling, pooling)(**args_pooling)
 
         self.use_fc = use_fc

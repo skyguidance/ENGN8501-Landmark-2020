@@ -123,7 +123,7 @@ def job(tuning, params_path, devices, resume, save_interval):
         eval_transform=eval_transform,
         scale='S2',
         test_size=0.1,
-        num_workers=os.cpu_count())
+        num_workers=os.cpu_count() * 2)
 
     model = models.LandmarkNet(n_classes=params['class_topk'],
                                model_name=params['model_name'],

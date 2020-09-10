@@ -1,4 +1,4 @@
-train_csv = "../input/gld_2020/train.csv"
-train_dir = "../input/gld_2020/train/"
-test_dir = "../input/gld_2020/test/"
+train_csv = "/home/tianyiqi/Datasets/train.csv"
+train_dir = "/home/tianyiqi/Datasets/train/"
+test_dir = "/home/tianyiqi/Datasets/test/"
 result_dir = "../result/ENGN8501/"
