@@ -1,6 +1,8 @@
 # ENGN8501 Advcaned Computer Vision Final Project
 # Google Landmark Challenge 2020
-
+### Generate Dataset Index DF:
+* Modify the dataset connecter and connect the dataset on your drive by changing the "src/dataset_connector.py" file.
+* Run generate_df.py, waiting for days. (PR are welcome for multi-threading enhancement).
 ### Train this code:
 * Download the 2020 Dataset, this is also known as GLDv2-Clean Dataset:https://www.kaggle.com/c/landmark-recognition-2020/data. The file downloaded is a zipped file at 97.6GB, so during the unzipping process it will take 2 times the space at most. Make sure you have enough space on your disk.
 * Clone this repo

@@ -207,6 +207,7 @@ def prepare_grouped_loader_from_df(df,
                         # batch_sampler=gb_sampler,
                         batch_size=batch_size,
                         pin_memory=True,
+                        drop_last=True,
                         num_workers=num_workers)
     return loader
 
