@@ -1,7 +1,7 @@
 # Modified for GLD 2020 Dataset
 # ENGN8501 Project
 
-
+from pathlib import Path
 import bisect
 import copy
 import math
@@ -150,6 +150,37 @@ def prepare_recognition_df(class_topk=1000,
     return train_filtered
 
 
+def prepare_recognition_df_predict(class_topk=1000,
+                                   least_freq_thresh=-1,
+                                   limit_samples_per_class=-1,
+                                   seed=7777777
+                                   ):
+    paths = list(Path(dataset_connector.test_dir).glob('**/*.jpg'))
+    return paths
+
+
+def prepare_grouped_loader_from_df_test(df,
+                                        transform,
+                                        batch_size,
+                                        scale='S',
+                                        is_train=True,
+                                        num_workers=4
+                                        ):
+    class_ids = None
+    dataset = LandmarkDataset(paths=df,
+                              class_ids=class_ids,
+                              # aspect_gids=df['aspect_gid'].values,
+                              transform=transform,
+                              scale=scale)
+
+    loader = DataLoader(dataset=dataset,
+                        # batch_sampler=gb_sampler,
+                        batch_size=batch_size,
+                        pin_memory=True,
+                        num_workers=num_workers)
+    return loader
+
+
 def prepare_grouped_loader_from_df(df,
                                    transform,
                                    batch_size,
@@ -262,48 +293,73 @@ def make_train_loaders(params,
 
 def make_predict_loaders(params,
                          data_root,
+                         use_clean_version=False,
+                         train_transform=None,
                          eval_transform=None,
                          scale='S',
-                         splits=('index', 'test'),
+                         class_topk=1000,
+                         limit_samples_per_class=-1,
+                         test_size=0.1,
                          num_workers=4,
-                         n_blocks=1,
-                         block_id=0,
+                         seed=77777
                          ):
-    """
-    :param splits: 読み込むデータセットの種類
-    :param block_id: ブロック分割したときのID
-    """
+    df = prepare_recognition_df_predict(class_topk=class_topk,
+                                        least_freq_thresh=-1,
+                                        limit_samples_per_class=limit_samples_per_class,
+                                        seed=seed)
+
     data_loaders = dict()
+    data_loaders['test'] = prepare_grouped_loader_from_df_test(
+        df, eval_transform, params['test_batch_size'],
+        scale=scale, is_train=False, num_workers=num_workers)
 
-    if '2' in scale:  # finer-grained aspect grouping
-        bins = [0.67, 0.77, 1.33, 1.5]
-    else:
-        bins = [0.77, 1.33]
-
-    for split in splits:
-        df = pd.read_pickle(f'{data_root}/{split}.pkl')
-        n_per_block = math.ceil(len(df) / n_blocks)
-        df = df.iloc[block_id * n_per_block: (block_id + 1) * n_per_block]
-
-        if 'path' not in df.columns:
-            if 'gld_v1' in data_root:
-                df['path'] = df['id'].apply(lambda x: f'{data_root}/{split}/{x}.jpg')
-            if 'gld_v2' in data_root:
-                df['path'] = df['id'].apply(lambda x: f'{data_root}/{split}/{"/".join(x[:3])}/{x}.jpg')
-
-        if scale == 'O':  # original resolution
-            dataset = LandmarkDataset(paths=df['path'].values, transform=eval_transform)
-            data_loaders[split] = DataLoader(dataset=dataset,
-                                             batch_size=1,
-                                             shuffle=False,
-                                             drop_last=False,
-                                             pin_memory=True,
-                                             num_workers=num_workers)
-        else:
-            df['aspect_ratio'] = df['height'] / df['width']
-            df['aspect_gid'] = _quantize(df['aspect_ratio'], bins=bins)
-            data_loaders[split] = prepare_grouped_loader_from_df(
-                df, eval_transform, params['test_batch_size'],
-                scale=scale, is_train=False, num_workers=num_workers)
-
+    print("[GLD2020-ENGN8501]Test Data loader Build Success....")
     return data_loaders
+
+# def make_predict_loaders(params,
+#                          data_root,
+#                          eval_transform=None,
+#                          scale='S',
+#                          splits=('index', 'test'),
+#                          num_workers=4,
+#                          n_blocks=1,
+#                          block_id=0,
+#                          ):
+#     """
+#     :param splits: 読み込むデータセットの種類
+#     :param block_id: ブロック分割したときのID
+#     """
+#     data_loaders = dict()
+#
+#     if '2' in scale:  # finer-grained aspect grouping
+#         bins = [0.67, 0.77, 1.33, 1.5]
+#     else:
+#         bins = [0.77, 1.33]
+#
+#     for split in splits:
+#         df = pd.read_pickle(f'{data_root}/{split}.pkl')
+#         n_per_block = math.ceil(len(df) / n_blocks)
+#         df = df.iloc[block_id * n_per_block: (block_id + 1) * n_per_block]
+#
+#         if 'path' not in df.columns:
+#             if 'gld_v1' in data_root:
+#                 df['path'] = df['id'].apply(lambda x: f'{data_root}/{split}/{x}.jpg')
+#             if 'gld_v2' in data_root:
+#                 df['path'] = df['id'].apply(lambda x: f'{data_root}/{split}/{"/".join(x[:3])}/{x}.jpg')
+#
+#         if scale == 'O':  # original resolution
+#             dataset = LandmarkDataset(paths=df['path'].values, transform=eval_transform)
+#             data_loaders[split] = DataLoader(dataset=dataset,
+#                                              batch_size=1,
+#                                              shuffle=False,
+#                                              drop_last=False,
+#                                              pin_memory=True,
+#                                              num_workers=num_workers)
+#         else:
+#             df['aspect_ratio'] = df['height'] / df['width']
+#             df['aspect_gid'] = _quantize(df['aspect_ratio'], bins=bins)
+#             data_loaders[split] = prepare_grouped_loader_from_df(
+#                 df, eval_transform, params['test_batch_size'],
+#                 scale=scale, is_train=False, num_workers=num_workers)
+#
+#     return data_loaders
