@@ -253,7 +253,7 @@ def tuning(mode, n_iter, n_gpu, devices, save_interval, n_blocks, block_id):
 @click.option('--devices', '-d', type=str, default="0", help='comma delimited gpu device list (e.g. "0,1")')
 @click.option('--ms', is_flag=True)
 @click.option('--scale', type=str, default='S')
-@click.option('--batch-size', '-b', type=int, default=64)
+@click.option('--batch-size', '-b', type=int, default=32)
 @click.option('--splits', type=str, default='index,test')
 @click.option('--n-blocks', '-n', type=int, default=1)
 @click.option('--block-id', '-i', type=int, default=0)
@@ -284,10 +284,10 @@ def predict(model_path, devices, ms, scale, batch_size, splits, n_blocks, block_
                                                    data_root=ROOT + 'input/gld_v2',
                                                    eval_transform=eval_transform,
                                                    scale=scale,
-                                                   splits=splits,
-                                                   num_workers=8,
-                                                   n_blocks=n_blocks,
-                                                   block_id=block_id)
+                                                   # splits=splits,
+                                                   num_workers=os.cpu_count() * 2)
+    # n_blocks=n_blocks,
+    # block_id=block_id)
 
     exp_path = ROOT + f'exp/{params["ex_name"]}/'
 
@@ -329,6 +329,77 @@ def predict(model_path, devices, ms, scale, batch_size, splits, n_blocks, block_
         with h5py.File(output_path / f'block{block_id}.h5', 'a') as f:
             f.create_dataset('ids', data=np.array(ids, dtype=f'S{len(ids[0])}'))
             f.create_dataset('feats', data=feats)
+    # os.environ['CUDA_VISIBLE_DEVICES'] = devices
+    #
+    # ckpt = torch.load(model_path)
+    # params, state_dict = ckpt['params'], ckpt['state_dict']
+    # params['test_batch_size'] = batch_size
+    #
+    # splits = splits.split(',')
+    #
+    # model = models.LandmarkNet(n_classes=params['class_topk'],
+    #                            model_name=params['model_name'],
+    #                            pooling=params['pooling'],
+    #                            loss_module=params['loss'],
+    #                            s=params['s'],
+    #                            margin=params['margin'],
+    #                            theta_zero=params['theta_zero'],
+    #                            use_fc=params['use_fc'],
+    #                            fc_dim=params['fc_dim'],
+    #                            )
+    # model.load_state_dict(state_dict)
+    # model = model.to('cuda').eval()
+    #
+    # train_transform, eval_transform = data_utils.build_transforms()
+    # data_loaders = data_utils.make_predict_loaders(params,
+    #                                                data_root=ROOT + 'input/gld_v2',
+    #                                                eval_transform=eval_transform,
+    #                                                scale=scale,
+    #                                                splits=splits,
+    #                                                num_workers=8,
+    #                                                n_blocks=n_blocks,
+    #                                                block_id=block_id)
+    #
+    # exp_path = ROOT + f'exp/{params["ex_name"]}/'
+    #
+    # file_suffix = model_path.split('/')[-1].replace('.pth', '')
+    # file_suffix = scale + '_' + file_suffix
+    # file_suffix = 'ms_' + file_suffix if ms else file_suffix
+    #
+    # min_size = 128
+    # scales = [0.75, 1.0, 1.25] if ms else [1.0]
+    #
+    # for split in splits:
+    #     ids, feats = [], []
+    #     for i, (img_id, x) in tqdm(enumerate(data_loaders[split]),
+    #                                total=len(data_loaders[split]),
+    #                                miniters=None, ncols=55):
+    #
+    #         batch_size, _, h, w = x.shape
+    #         feat_blend = np.zeros((batch_size, params['fc_dim']), dtype=np.float32)
+    #
+    #         with torch.no_grad():
+    #             x = x.to('cuda')
+    #
+    #             for s in scales:
+    #                 th = max(min_size, int(h * s // model.DIVIDABLE_BY * model.DIVIDABLE_BY))
+    #                 tw = max(min_size, int(w * s // model.DIVIDABLE_BY * model.DIVIDABLE_BY))  # round off
+    #
+    #                 scaled_x = F.interpolate(x, size=(th, tw), mode='bilinear', align_corners=True)
+    #                 feat = model.extract_feat(scaled_x)
+    #                 feat = feat.cpu().numpy()
+    #                 feat_blend += feat
+    #
+    #         feats.append(feat_blend)
+    #         ids.extend(img_id)
+    #
+    #     feats = np.concatenate(feats) / len(scales)
+    #
+    #     output_path = Path(f'{exp_path}feats_{split}_{file_suffix}')
+    #     output_path.mkdir(parents=True, exist_ok=True)
+    #     with h5py.File(output_path / f'block{block_id}.h5', 'a') as f:
+    #         f.create_dataset('ids', data=np.array(ids, dtype=f'S{len(ids[0])}'))
+    #         f.create_dataset('feats', data=feats)
 
 
 @cli.command()

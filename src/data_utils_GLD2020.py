@@ -4,6 +4,7 @@
 from pathlib import Path
 import bisect
 import copy
+import pickle
 import math
 from src import dataset_connector
 import cv2
@@ -146,7 +147,12 @@ def prepare_recognition_df(class_topk=1000,
     train_filtered = train.loc[keep_index]
     train_filtered['landmark_id'] = train_filtered['landmark_id'].astype('category')
     train_filtered['class_id'] = train_filtered['landmark_id'].cat.codes.astype('int64')
-
+    lookup_index = train_filtered.copy()
+    del lookup_index["id"]
+    lookup_index.drop_duplicates(inplace=True)
+    classid_2_landmarkid = dict(zip(lookup_index.iloc[:, 1], lookup_index.iloc[:, 0]))
+    pickle.dump(classid_2_landmarkid,
+                open(os.path.join(dataset_connector.result_dir, "classid_2_landmarkid.pkl"), "wb"))
     return train_filtered
 
 

@@ -68,7 +68,7 @@ class LandmarkNet(nn.Module):
         nn.init.constant_(self.bn.weight, 1)
         nn.init.constant_(self.bn.bias, 0)
 
-    def forward(self, x, label):
+    def forward(self, x, label=None):
         feature = self.extract_feat(x)
         if self.loss_module in ('arcface', 'cosface', 'adacos'):
             logits = self.final(feature, label)
