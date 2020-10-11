@@ -4,21 +4,20 @@ import torch.nn.functional as F
 import pretrainedmodels
 
 from src import utils
-from .metric_learning import ArcMarginProduct, AddMarginProduct, AdaCos
+from .metric_learning import *
 import cirtorch
 
 ROOT = '../'
 
 
 class LandmarkNet(nn.Module):
-
     DIVIDABLE_BY = 32
 
     def __init__(self,
                  n_classes,
                  model_name='resnet50',
                  pooling='GeM',
-                 args_pooling: dict={},
+                 args_pooling: dict = {},
                  use_fc=False,
                  fc_dim=512,
                  dropout=0.0,
@@ -59,6 +58,9 @@ class LandmarkNet(nn.Module):
             self.final = AddMarginProduct(final_in_features, n_classes, s=s, m=margin)
         elif loss_module == 'adacos':
             self.final = AdaCos(final_in_features, n_classes, m=margin, theta_zero=theta_zero)
+        # New by Group
+        elif loss_module == "AdditiveMarginSoftmaxLoss":
+            self.final = AdMSoftmaxLoss(final_in_features, n_classes, s=s, m=margin)
         else:
             self.final = nn.Linear(final_in_features, n_classes)
 
@@ -70,7 +72,7 @@ class LandmarkNet(nn.Module):
 
     def forward(self, x, label=None):
         feature = self.extract_feat(x)
-        if self.loss_module in ('arcface', 'cosface', 'adacos'):
+        if self.loss_module in ('arcface', 'cosface', 'adacos','AdditiveMarginSoftmaxLoss'):
             logits = self.final(feature, label)
         else:
             logits = self.final(feature)

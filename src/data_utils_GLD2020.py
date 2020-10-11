@@ -262,7 +262,7 @@ def make_train_loaders(params,
                        limit_samples_per_class=-1,
                        test_size=0.1,
                        num_workers=4,
-                       seed=77777
+                       seed=0
                        ):
     df = prepare_recognition_df(class_topk=class_topk,
                                 least_freq_thresh=-1,
@@ -285,7 +285,7 @@ def make_train_loaders(params,
     # df['aspect_ratio'] = df['height'] / df['width']
     # df['aspect_gid'] = _quantize(df['aspect_ratio'], bins=bins)
 
-    train_split, val_split = train_test_split(df, test_size=test_size, random_state=seed)
+    train_split, val_split = train_test_split(df, test_size=test_size, random_state=0)
 
     data_loaders = dict()
     data_loaders['train'] = prepare_grouped_loader_from_df(
