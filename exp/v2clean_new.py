@@ -46,7 +46,7 @@ params = {
     'model_name': 'resnet101',
     'pooling': 'GeM',
     'use_fc': True,
-    'loss': 'AdditiveMarginSoftmaxLoss',
+    'loss': 'LSoftmax',
     'margin': 0.3,
     's': 30,
     'theta_zero': 1.25,

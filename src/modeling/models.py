@@ -61,6 +61,8 @@ class LandmarkNet(nn.Module):
         # New by Group
         elif loss_module == "AdditiveMarginSoftmaxLoss":
             self.final = AdMSoftmaxLoss(final_in_features, n_classes, s=s, m=margin)
+        elif loss_module == "LSoftmax":
+            self.final = LSoftmaxLinear(final_in_features, n_classes, margin=margin)
         else:
             self.final = nn.Linear(final_in_features, n_classes)
 
@@ -72,7 +74,7 @@ class LandmarkNet(nn.Module):
 
     def forward(self, x, label=None):
         feature = self.extract_feat(x)
-        if self.loss_module in ('arcface', 'cosface', 'adacos','AdditiveMarginSoftmaxLoss'):
+        if self.loss_module in ('arcface', 'cosface', 'adacos', 'AdditiveMarginSoftmaxLoss''LSoftmax'):
             logits = self.final(feature, label)
         else:
             logits = self.final(feature)
