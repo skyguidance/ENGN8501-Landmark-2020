@@ -51,6 +51,7 @@ class LandmarkNet(nn.Module):
             final_in_features = fc_dim
 
         self.loss_module = loss_module
+        print("Current Loss:{}".format(self.loss_module))
         if loss_module == 'arcface':
             self.final = ArcMarginProduct(final_in_features, n_classes,
                                           s=s, m=margin, easy_margin=False, ls_eps=ls_eps)
@@ -74,7 +75,7 @@ class LandmarkNet(nn.Module):
 
     def forward(self, x, label=None):
         feature = self.extract_feat(x)
-        if self.loss_module in ('arcface', 'cosface', 'adacos', 'AdditiveMarginSoftmaxLoss''LSoftmax'):
+        if self.loss_module in ('arcface', 'cosface', 'adacos', 'AdditiveMarginSoftmaxLoss','LSoftmax'):
             logits = self.final(feature, label)
         else:
             logits = self.final(feature)

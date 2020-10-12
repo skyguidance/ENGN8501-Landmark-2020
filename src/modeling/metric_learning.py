@@ -43,7 +43,7 @@ class AdMSoftmaxLoss(nn.Module):
         excl = torch.cat([torch.cat((wf[i, :y], wf[i, y + 1:])).unsqueeze(0) for i, y in enumerate(labels)], dim=0)
         denominator = torch.exp(numerator) + torch.sum(torch.exp(self.s * excl), dim=1)
         L = numerator - torch.log(denominator)
-        return -torch.mean(L)
+        return wf,-torch.mean(L)
 
 class LSoftmaxLinear(nn.Module):
     # https://github.com/amirhfarzaneh/lsoftmax-pytorch/blob/master/lsoftmax.py

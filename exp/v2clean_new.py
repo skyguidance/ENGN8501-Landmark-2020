@@ -46,7 +46,7 @@ params = {
     'model_name': 'resnet101',
     'pooling': 'GeM',
     'use_fc': True,
-    'loss': 'LSoftmax',
+    'loss': 'AdditiveMarginSoftmaxLoss',
     'margin': 0.3,
     's': 30,
     'theta_zero': 1.25,
@@ -132,8 +132,7 @@ def job(tuning, params_path, devices, resume, save_interval):
     model = models.LandmarkNet(n_classes=params['class_topk'],
                                model_name=params['model_name'],
                                pooling=params['pooling'],
-                               # loss_module=params['loss'],
-                               loss_module=None,
+                               loss_module=params['loss'],
                                s=params['s'],
                                margin=params['margin'],
                                theta_zero=params['theta_zero'],
@@ -173,8 +172,8 @@ def job(tuning, params_path, devices, resume, save_interval):
                                  miniters=None, ncols=55):
             x = x.to('cuda')
             y = y.to('cuda')
-            outputs = model(x, y)
-            loss = criterion(outputs, y)
+            outputs, loss = model(x, y)
+            # loss = criterion(outputs, y)
 
             optimizer.zero_grad()
             loss.backward()
