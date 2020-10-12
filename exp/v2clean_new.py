@@ -36,17 +36,17 @@ params = {
     'ex_name': __file__.replace('.py', ''),
     'class_topk': 1000,
     'seed': 123456789,
-    'lr': 1e-3,
+    'lr': 0.001,
     'batch_size': 32,
     'test_batch_size': 64,
     'optimizer': 'momentum',
-    'epochs': 30,
+    'epochs': 15,
     'scaleup_epochs': 0,
     'wd': 1e-5,
     'model_name': 'resnet101',
     'pooling': 'GeM',
     'use_fc': True,
-    'loss': 'AdditiveMarginSoftmaxLoss',
+    'loss': '',
     'margin': 0.3,
     's': 30,
     'theta_zero': 1.25,
@@ -86,137 +86,146 @@ def cli():
 @click.option('--save-interval', '-s', type=int, default=1, help='if 0 or negative value, not saving')
 def job(tuning, params_path, devices, resume, save_interval):
     global params
-    if tuning:
-        with open(params_path, 'r') as f:
-            params = json.load(f)
-        mode_str = 'tuning'
-        setting = '_'.join(f'{tp}-{params[tp]}' for tp in params['tuning_params'])
-    else:
-        mode_str = 'train'
-        setting = ''
+    for loss_input in ["Softmax", "arcface", "cosface", "AdditiveMarginSoftmaxLoss"]:
+        params["loss"] = loss_input
+        if tuning:
+            with open(params_path, 'r') as f:
+                params = json.load(f)
+            mode_str = 'tuning'
+            setting = '_'.join(f'{tp}-{params[tp]}' for tp in params['tuning_params'])
+        else:
+            mode_str = 'train'
+            setting = ''
 
-    exp_path = os.path.join(dataset_connector.result_dir, f'{params["ex_name"]}/')
-    os.environ['CUDA_VISIBLE_DEVICES'] = devices
-    print("CUDA Available:", torch.cuda.is_available(), "CUDA_VISIBLE_DEVICES:", os.environ['CUDA_VISIBLE_DEVICES'])
-    logger, writer = utils.get_logger(log_dir=exp_path + f'{mode_str}/log/{setting}',
-                                      tensorboard_dir=exp_path + f'{mode_str}/tf_board/{setting}')
+        exp_path = os.path.join(dataset_connector.result_dir, f'{params["ex_name"]}/', f'{params["loss"]}/')
+        os.environ['CUDA_VISIBLE_DEVICES'] = devices
+        print("CUDA Available:", torch.cuda.is_available(), "CUDA_VISIBLE_DEVICES:", os.environ['CUDA_VISIBLE_DEVICES'])
+        logger, writer = utils.get_logger(log_dir=exp_path + f'{mode_str}/log/{setting}',
+                                          tensorboard_dir=exp_path + f'{mode_str}/tf_board/{setting}')
 
-    if params['augmentation'] == 'soft':
-        params['scale_limit'] = 0.2
-        params['brightness_limit'] = 0.1
-    elif params['augmentation'] == 'middle':
-        params['scale_limit'] = 0.3
-        params['shear_limit'] = 4
-        params['brightness_limit'] = 0.1
-        params['contrast_limit'] = 0.1
-    else:
-        raise ValueError
+        if params['augmentation'] == 'soft':
+            params['scale_limit'] = 0.2
+            params['brightness_limit'] = 0.1
+        elif params['augmentation'] == 'middle':
+            params['scale_limit'] = 0.3
+            params['shear_limit'] = 4
+            params['brightness_limit'] = 0.1
+            params['contrast_limit'] = 0.1
+        else:
+            raise ValueError
 
-    train_transform, eval_transform = data_utils.build_transforms(
-        scale_limit=params['scale_limit'],
-        shear_limit=params['shear_limit'],
-        brightness_limit=params['brightness_limit'],
-        contrast_limit=params['contrast_limit'],
-    )
+        train_transform, eval_transform = data_utils.build_transforms(
+            scale_limit=params['scale_limit'],
+            shear_limit=params['shear_limit'],
+            brightness_limit=params['brightness_limit'],
+            contrast_limit=params['contrast_limit'],
+        )
 
-    data_loaders = data_utils.make_train_loaders(
-        params=params,
-        data_root=ROOT + 'input/' + params['train_data'],
-        use_clean_version=True,
-        train_transform=train_transform,
-        eval_transform=eval_transform,
-        scale='S2',
-        test_size=0.1,
-        num_workers=os.cpu_count() * 2)
+        data_loaders = data_utils.make_train_loaders(
+            params=params,
+            data_root=ROOT + 'input/' + params['train_data'],
+            use_clean_version=True,
+            train_transform=train_transform,
+            eval_transform=eval_transform,
+            scale='S2',
+            test_size=0.1,
+            num_workers=os.cpu_count() * 2)
 
-    model = models.LandmarkNet(n_classes=params['class_topk'],
-                               model_name=params['model_name'],
-                               pooling=params['pooling'],
-                               loss_module=params['loss'],
-                               s=params['s'],
-                               margin=params['margin'],
-                               theta_zero=params['theta_zero'],
-                               use_fc=params['use_fc'],
-                               fc_dim=params['fc_dim'],
-                               ).cuda()
+        model = models.LandmarkNet(n_classes=params['class_topk'],
+                                   model_name=params['model_name'],
+                                   pooling=params['pooling'],
+                                   loss_module=params['loss'],
+                                   s=params['s'],
+                                   margin=params['margin'],
+                                   theta_zero=params['theta_zero'],
+                                   use_fc=params['use_fc'],
+                                   fc_dim=params['fc_dim'],
+                                   ).cuda()
 
-    criterion = nn.CrossEntropyLoss()
-    optimizer = utils.get_optim(params, model)
+        criterion = nn.CrossEntropyLoss()
+        optimizer = utils.get_optim(params, model)
 
-    # TODO: Missing initial weight file.
-    # sdict = torch.load(resume)['state_dict']
-    # del sdict['final.weight']  # remove fully-connected layer
-    # model.load_state_dict(sdict, strict=False)
-    # model.backbone.requires_grad = False
-    # model.bn.requires_grad = False
-    # model.dropout.requires_grad = False
-    # model.fc.requires_grad = False
-    scheduler = optim.lr_scheduler.CosineAnnealingLR(
-        optimizer, T_max=params['epochs'] * len(data_loaders['train']), eta_min=3e-6)
-    start_epoch, end_epoch = (0, params['epochs'] - params['scaleup_epochs'])
+        # TODO: Missing initial weight file.
+        # sdict = torch.load(resume)['state_dict']
+        # del sdict['final.weight']  # remove fully-connected layer
+        # model.load_state_dict(sdict, strict=False)
+        # model.backbone.requires_grad = False
+        # model.bn.requires_grad = False
+        # model.dropout.requires_grad = False
+        # model.fc.requires_grad = False
+        scheduler = optim.lr_scheduler.CosineAnnealingLR(
+            optimizer, T_max=params['epochs'] * len(data_loaders['train']), eta_min=3e-6)
+        start_epoch, end_epoch = (0, params['epochs'] - params['scaleup_epochs'])
 
-    if len(devices.split(',')) > 1:
-        model = nn.DataParallel(model)
+        if len(devices.split(',')) > 1:
+            model = nn.DataParallel(model)
 
-    for epoch in range(start_epoch, end_epoch):
-        logger.info(f'Epoch {epoch}/{end_epoch}')
+        for epoch in range(start_epoch, end_epoch):
+            logger.info(f'Epoch {epoch}/{end_epoch}')
 
-        # ============================== train ============================== #
-        model.train(True)
+            # ============================== train ============================== #
+            model.train(True)
 
-        losses = utils.AverageMeter()
-        prec1 = utils.AverageMeter()
+            losses = utils.AverageMeter()
+            prec1 = utils.AverageMeter()
 
-        for i, (_, x, y) in tqdm(enumerate(data_loaders['train']),
-                                 total=len(data_loaders['train']),
-                                 miniters=None, ncols=55):
-            x = x.to('cuda')
-            y = y.to('cuda')
-            outputs, loss = model(x, y)
-            # loss = criterion(outputs, y)
+            for i, (_, x, y) in tqdm(enumerate(data_loaders['train']),
+                                     total=len(data_loaders['train']),
+                                     miniters=None, ncols=55):
+                x = x.to('cuda')
+                y = y.to('cuda')
 
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-            scheduler.step()
+                if params["loss"] in ["AdditiveMarginSoftmaxLoss"]:
+                    outputs, loss = model(x, y)
+                elif params["loss"] in ["LSoftmax", "arcface", "cosface"]:
+                    outputs = model(x, y)
+                    loss = criterion(outputs, y)
+                elif params["loss"] in ["Softmax"]:
+                    outputs = model(x)
+                    loss = criterion(outputs, y)
 
-            acc = metrics.accuracy(outputs, y)
-            losses.update(loss.item(), x.size(0))
-            prec1.update(acc, x.size(0))
-            logger.info("Training Loss:{},Accuracy(Prec1):{}".format(loss.item(), acc))
-            if i % 100 == 99:
-                logger.info(f'{epoch + i / len(data_loaders["train"]):.2f}epoch | {setting} acc: {prec1.avg}')
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+                scheduler.step()
 
-        train_loss = losses.avg
-        train_acc = prec1.avg
+                acc = metrics.accuracy(outputs, y)
+                losses.update(loss.item(), x.size(0))
+                prec1.update(acc, x.size(0))
+                logger.info("Training Loss:{},Accuracy(Prec1):{}".format(loss.item(), acc))
+                if i % 100 == 99:
+                    logger.info(f'{epoch + i / len(data_loaders["train"]):.2f}epoch | {setting} acc: {prec1.avg}')
 
-        writer.add_scalars('Loss', {'train': train_loss}, epoch)
-        writer.add_scalars('Acc', {'train': train_acc}, epoch)
-        writer.add_scalar('LR', optimizer.param_groups[0]['lr'], epoch)
+            train_loss = losses.avg
+            train_acc = prec1.avg
 
-        if (epoch + 1) == end_epoch or (epoch + 1) % save_interval == 0:
-            output_file_name = exp_path + f'tuning_ep{epoch}_' + setting + '.pth'
-            print("Model Saved:{}".format(output_file_name))
-            utils.save_checkpoint(path=output_file_name,
-                                  model=model,
-                                  epoch=epoch,
-                                  optimizer=optimizer,
-                                  params=params)
+            writer.add_scalars('Loss', {'train': train_loss}, epoch)
+            writer.add_scalars('Acc', {'train': train_acc}, epoch)
+            writer.add_scalar('LR', optimizer.param_groups[0]['lr'], epoch)
 
-    model = model.module
-    datasets = ('oxford5k', 'paris6k', 'roxford5k', 'rparis6k')
-    results = eval_datasets(model, datasets=datasets, ms=True, tta_gem_p=1.0, logger=logger)
-
-    if tuning:
-        tuning_result = {}
-        for d in datasets:
-            if d in ('oxford5k', 'paris6k'):
-                tuning_result[d] = results[d]
-            else:
-                for key in ['mapE', 'mapM', 'mapH']:
-                    mapE, mapM, mapH, mpE, mpM, mpH, kappas = results[d]
-                    tuning_result[d + '-' + key] = [eval(key)]
-        utils.write_tuning_result(params, tuning_result, exp_path + 'tuning/results.csv')
+            if (epoch + 1) == end_epoch or (epoch + 1) % save_interval == 0:
+                output_file_name = exp_path + f'Epoch{epoch}_' + str(params["loss"]) + setting + '.pth'
+                print("Model Saved:{}".format(output_file_name))
+                utils.save_checkpoint(path=output_file_name,
+                                      model=model,
+                                      epoch=epoch,
+                                      optimizer=optimizer,
+                                      params=params)
+    #
+    # model = model.module
+    # datasets = ('oxford5k', 'paris6k', 'roxford5k', 'rparis6k')
+    # results = eval_datasets(model, datasets=datasets, ms=True, tta_gem_p=1.0, logger=logger)
+    #
+    # if tuning:
+    #     tuning_result = {}
+    #     for d in datasets:
+    #         if d in ('oxford5k', 'paris6k'):
+    #             tuning_result[d] = results[d]
+    #         else:
+    #             for key in ['mapE', 'mapM', 'mapH']:
+    #                 mapE, mapM, mapH, mpE, mpM, mpH, kappas = results[d]
+    #                 tuning_result[d + '-' + key] = [eval(key)]
+    #     utils.write_tuning_result(params, tuning_result, exp_path + 'tuning/results.csv')
 
 
 @cli.command()

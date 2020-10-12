@@ -43,7 +43,8 @@ class AdMSoftmaxLoss(nn.Module):
         excl = torch.cat([torch.cat((wf[i, :y], wf[i, y + 1:])).unsqueeze(0) for i, y in enumerate(labels)], dim=0)
         denominator = torch.exp(numerator) + torch.sum(torch.exp(self.s * excl), dim=1)
         L = numerator - torch.log(denominator)
-        return wf,-torch.mean(L)
+        return wf, -torch.mean(L)
+
 
 class LSoftmaxLinear(nn.Module):
     # https://github.com/amirhfarzaneh/lsoftmax-pytorch/blob/master/lsoftmax.py
@@ -70,7 +71,7 @@ class LSoftmaxLinear(nn.Module):
         self.signs[1::2] = -1
 
     def calculate_cos_m_theta(self, cos_theta):
-        sin2_theta = 1 - cos_theta**2
+        sin2_theta = 1 - cos_theta ** 2
         cos_terms = cos_theta.unsqueeze(1) ** self.cos_powers.unsqueeze(0)  # cos^{m - 2n}
         sin2_terms = (sin2_theta.unsqueeze(1)  # sin2^{n}
                       ** self.sin2_powers.unsqueeze(0))
@@ -94,40 +95,43 @@ class LSoftmaxLinear(nn.Module):
         return k
 
     def forward(self, input, target=None):
-        if self.training:
-            assert target is not None
-            x, w = input, self.weight
-            beta = max(self.beta, self.beta_min)
-            logit = x.mm(w)
-            indexes = range(logit.size(0))
-            logit_target = logit[indexes, target]
+        assert target is not None
+        x, w = input, self.weight
+        beta = max(self.beta, self.beta_min)
+        logit = x.mm(w)
+        indexes = range(logit.size(0))
+        logit_target = logit[indexes, target]
 
-            # cos(theta) = w * x / ||w||*||x||
-            w_target_norm = w[:, target].norm(p=2, dim=0)
-            x_norm = x.norm(p=2, dim=1)
-            cos_theta_target = logit_target / (w_target_norm * x_norm + 1e-10)
+        # cos(theta) = w * x / ||w||*||x||
+        w_target_norm = w[:, target].norm(p=2, dim=0)
+        x_norm = x.norm(p=2, dim=1)
+        cos_theta_target = logit_target / (w_target_norm * x_norm + 1e-10)
 
-            # equation 7
-            cos_m_theta_target = self.calculate_cos_m_theta(cos_theta_target)
+        # equation 7
+        cos_m_theta_target = self.calculate_cos_m_theta(cos_theta_target)
 
-            # find k in equation 6
-            k = self.find_k(cos_theta_target)
+        # find k in equation 6
+        k = self.find_k(cos_theta_target)
 
-            # f_y_i
-            logit_target_updated = (w_target_norm *
-                                    x_norm *
-                                    (((-1) ** k * cos_m_theta_target) - 2 * k))
-            logit_target_updated_beta = (logit_target_updated + beta * logit[indexes, target]) / (1 + beta)
+        # f_y_i
+        logit_target_updated = (w_target_norm *
+                                x_norm *
+                                (((-1) ** k * cos_m_theta_target) - 2 * k))
+        logit_target_updated_beta = (logit_target_updated + beta * logit[indexes, target]) / (1 + beta)
 
-            logit[indexes, target] = logit_target_updated_beta
-            self.beta *= self.scale
-            return logit
-        else:
-            assert target is None
-            return input.mm(self.weight)
+        logit[indexes, target] = logit_target_updated_beta
+        self.beta *= self.scale
+        return logit
+        # if True:
+        #     # if self.training:
+        #     pass
+        # else:
+        #     assert target is None
+        #     return input.mm(self.weight)
+
 
 class AdaCos(nn.Module):
-    def __init__(self, in_features, out_features, m=0.50, ls_eps=0, theta_zero=math.pi/4):
+    def __init__(self, in_features, out_features, m=0.50, ls_eps=0, theta_zero=math.pi / 4):
         super(AdaCos, self).__init__()
         self.in_features = in_features
         self.out_features = out_features
@@ -220,6 +224,7 @@ class ArcMarginProduct(nn.Module):
             m: margin
             cos(theta + m)
         """
+
     def __init__(self, in_features, out_features, s=30.0, m=0.50, easy_margin=False, ls_eps=0.0):
         super(ArcMarginProduct, self).__init__()
         self.in_features = in_features
@@ -286,7 +291,8 @@ class AddMarginProduct(nn.Module):
         # one_hot = one_hot.cuda() if cosine.is_cuda else one_hot
         one_hot.scatter_(1, label.view(-1, 1).long(), 1)
         # -------------torch.where(out_i = {x_i if condition_i else y_i) -------------
-        output = (one_hot * phi) + ((1.0 - one_hot) * cosine)  # you can use torch.where if your torch.__version__ is 0.4
+        output = (one_hot * phi) + (
+                (1.0 - one_hot) * cosine)  # you can use torch.where if your torch.__version__ is 0.4
         output *= self.s
         # print(output)
 
@@ -308,6 +314,7 @@ class SphereProduct(nn.Module):
         m: margin
         cos(m*theta)
     """
+
     def __init__(self, in_features, out_features, m=4):
         super(SphereProduct, self).__init__()
         self.in_features = in_features
@@ -368,6 +375,7 @@ class HardTripletLoss(nn.Module):
     (pytorch implementation of https://omoindrot.github.io/triplet-loss)
     For each anchor, we get the hardest positive and hardest negative to form a triplet.
     """
+
     def __init__(self, margin=0.1, hardest=False, squared=False):
         """
         Args:
@@ -495,6 +503,6 @@ def _get_triplet_mask(labels):
     i_equal_k = torch.unsqueeze(label_equal, 1)
     valid_labels = i_equal_j * (i_equal_k ^ 1)
 
-    mask = distinct_indices * valid_labels   # Combine the two masks
+    mask = distinct_indices * valid_labels  # Combine the two masks
 
     return mask

@@ -21,7 +21,7 @@ class LandmarkNet(nn.Module):
                  use_fc=False,
                  fc_dim=512,
                  dropout=0.0,
-                 loss_module='softmax',
+                 loss_module = "",
                  s=30.0,
                  margin=0.50,
                  ls_eps=0.0,
@@ -63,9 +63,11 @@ class LandmarkNet(nn.Module):
         elif loss_module == "AdditiveMarginSoftmaxLoss":
             self.final = AdMSoftmaxLoss(final_in_features, n_classes, s=s, m=margin)
         elif loss_module == "LSoftmax":
-            self.final = LSoftmaxLinear(final_in_features, n_classes, margin=margin)
-        else:
+            self.final = LSoftmaxLinear(final_in_features, n_classes, margin=2)
+        elif loss_module == "Softmax":
             self.final = nn.Linear(final_in_features, n_classes)
+        else:
+            raise NotImplementedError("Loss Not Implemented.")
 
     def _init_params(self):
         nn.init.xavier_normal_(self.fc.weight)
@@ -75,10 +77,12 @@ class LandmarkNet(nn.Module):
 
     def forward(self, x, label=None):
         feature = self.extract_feat(x)
-        if self.loss_module in ('arcface', 'cosface', 'adacos', 'AdditiveMarginSoftmaxLoss','LSoftmax'):
+        if self.loss_module in ['arcface', 'cosface', 'adacos', 'AdditiveMarginSoftmaxLoss', 'LSoftmax']:
             logits = self.final(feature, label)
-        else:
+        elif self.loss_module in ["Softmax"]:
             logits = self.final(feature)
+        else:
+            raise NotImplementedError("Loss Not Implemented.")
         return logits
 
     def extract_feat(self, x):
