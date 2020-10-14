@@ -2,7 +2,12 @@
 
 1. Download Dataset. (Partial GLDv1 image with bounding box). [Click here(Google Drive)](https://drive.google.com/file/d/1x8QUt0yMOxkxYbRusbcFRoAdZcrDtzkX/view?usp=sharing). After download, unzip and change the value "dataset_path" in dataset_connector.py to the unzipped folder.
 
-2. Run the following code to train. Link the --csv_train to the csv file you just unzipped. the pretrained model "--pretrained" is the default pretrained model on ImageNet.
+2. Make Dir for reuslt.
+```
+mkdir ckpt mAP_txt summary weight
+```
+
+3. Run the following code to train. Link the --csv_train to the csv file you just unzipped. the pretrained model "--pretrained" is the default pretrained model on ImageNet.
 - resnet101: [https://download.pytorch.org/models/resnet101-5d3b4d8f.pth](https://download.pytorch.org/models/resnet101-5d3b4d8f.pth)
 ```
 train.py --csv_train "/your/path/to/final_data.csv" --depth 101 --model_name "LandmarkAttentionNet-Resnet101" --pretrained "resnet101-5d3b4d8f.pth"
