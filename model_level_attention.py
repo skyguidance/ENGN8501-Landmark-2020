@@ -10,15 +10,53 @@ from torch.nn import init
 from utils import BasicBlock, Bottleneck, BBoxTransform, ClipBoxes
 from anchors import Anchors
 import losses
-from lib.nms.pth_nms import pth_nms
+#from lib.nms.pth_nms import pth_nms
 from dataloader import UnNormalizer
 unnormalize = UnNormalizer()
 
 
+# def nms(dets, thresh):
+#     "Dispatch to either CPU or GPU NMS implementations.\
+#     Accept dets as tensor"""
+#     return pth_nms(dets, thresh)
 def nms(dets, thresh):
-    "Dispatch to either CPU or GPU NMS implementations.\
-    Accept dets as tensor"""
-    return pth_nms(dets, thresh)
+    """
+    greedily select boxes with high confidence and overlap with current maximum <= thresh
+    rule out overlap >= thresh
+    :param dets: [[x1, y1, x2, y2 score]]
+    :param thresh: retain overlap < thresh
+    :return: indexes to keep
+    """
+    if dets.shape[0] == 0:
+        return []
+
+    x1 = dets[:, 0]
+    y1 = dets[:, 1]
+    x2 = dets[:, 2]
+    y2 = dets[:, 3]
+    scores = dets[:, 4]
+
+    areas = (x2 - x1 + 1) * (y2 - y1 + 1)
+    order = scores.argsort()[::-1]
+
+    keep = []
+    while order.size > 0:
+        i = order[0]
+        keep.append(i)
+        xx1 = np.maximum(x1[i], x1[order[1:]])
+        yy1 = np.maximum(y1[i], y1[order[1:]])
+        xx2 = np.minimum(x2[i], x2[order[1:]])
+        yy2 = np.minimum(y2[i], y2[order[1:]])
+
+        w = np.maximum(0.0, xx2 - xx1 + 1)
+        h = np.maximum(0.0, yy2 - yy1 + 1)
+        inter = w * h
+        ovr = inter / (areas[i] + areas[order[1:]] - inter)
+
+        inds = np.where(ovr <= thresh)[0]
+        order = order[inds + 1]
+
+    return keep
 
 
 class PyramidFeatures(nn.Module):
@@ -54,12 +92,12 @@ class PyramidFeatures(nn.Module):
         P5_x = self.P5_2(P5_x)
 
         P4_x = self.P4_1(C4)
-        P4_x = P5_upsampled_x + P4_x
+        P4_x = P5_upsampled_x.contiguous() + P4_x.contiguous()
         P4_upsampled_x = self.P4_upsampled(P4_x)
         P4_x = self.P4_2(P4_x)
 
         P3_x = self.P3_1(C3)
-        P3_x = P3_x + P4_upsampled_x
+        P3_x = P3_x.contiguous() + P4_upsampled_x.contiguous()
         P3_x = self.P3_2(P3_x)
 
         P6_x = self.P6(C5)

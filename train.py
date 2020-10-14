@@ -24,7 +24,7 @@ from torch.utils.data import Dataset, DataLoader
 
 import csv_eval
 import cv2
-assert torch.__version__.split('.')[1] == '4'
+#assert torch.__version__.split('.')[1] == '4'
 
 print('CUDA available: {}'.format(torch.cuda.is_available()))
 
@@ -54,8 +54,8 @@ def main(args=None):
     else:
         dataset_val = CSVDataset(train_file=parser.csv_val, class_list=parser.csv_classes, transform=transforms.Compose([Resizer(), Normalizer()]))
 
-    sampler = AspectRatioBasedSampler(dataset_train, batch_size=2, drop_last=False)
-    dataloader_train = DataLoader(dataset_train, num_workers=16, collate_fn=collater, batch_sampler=sampler)
+    sampler = AspectRatioBasedSampler(dataset_train, batch_size=2, drop_last=True)
+    dataloader_train = DataLoader(dataset_train, num_workers=16, collate_fn=collater, batch_sampler=sampler, pin_memory=True)
     #dataloader_train = DataLoader(dataset_train, num_workers=16, collate_fn=collater, batch_size=8, shuffle=True)
 
     if dataset_val is not None:
@@ -144,7 +144,7 @@ def main(args=None):
 
             epoch_loss.append(float(loss))
 
-            print('Epoch: {} | Iteration: {} | Classification loss: {:1.5f} | Regression loss: {:1.5f} | mask_loss {:1.5f} | Running loss: {:1.5f}'.format(epoch_num, iter_num, float(classification_loss), float(regression_loss), float(mask_loss), np.mean(loss_hist)))
+            print('Epoch: {}/{} | Iteration: {}/{} | Classification loss: {:1.5f} | Regression loss: {:1.5f} | mask_loss {:1.5f} | Running loss: {:1.5f}'.format(epoch_num,parser.epochs-1, iter_num,len(dataloader_train), float(classification_loss), float(regression_loss), float(mask_loss), np.mean(loss_hist)))
 
             writer.add_scalar('classification_loss', classification_loss, iters)
             writer.add_scalar('regression_loss', regression_loss, iters)
