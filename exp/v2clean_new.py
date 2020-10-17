@@ -5,6 +5,7 @@ import re
 import subprocess
 import pickle
 import time
+from collections import OrderedDict
 from pathlib import Path
 import sys
 from scipy.special import softmax
@@ -40,7 +41,7 @@ params = {
     'batch_size': 32,
     'test_batch_size': 64,
     'optimizer': 'momentum',
-    'epochs': 15,
+    'epochs': 30,
     'scaleup_epochs': 0,
     'wd': 1e-5,
     'model_name': 'resnet101',
@@ -145,7 +146,12 @@ def job(tuning, params_path, devices, resume, save_interval):
         criterion = nn.CrossEntropyLoss()
         optimizer = utils.get_optim(params, model)
 
-        # TODO: Missing initial weight file.
+        state_dict = torch.load(os.path.join("../pretrained_model", "Epoch14_" + loss_input + ".pth"))
+        clean_state_dict = OrderedDict()
+        for k, v in state_dict.items():
+            name = k[7:]
+            clean_state_dict[name] = v
+
         # sdict = torch.load(resume)['state_dict']
         # del sdict['final.weight']  # remove fully-connected layer
         # model.load_state_dict(sdict, strict=False)
@@ -155,7 +161,7 @@ def job(tuning, params_path, devices, resume, save_interval):
         # model.fc.requires_grad = False
         scheduler = optim.lr_scheduler.CosineAnnealingLR(
             optimizer, T_max=params['epochs'] * len(data_loaders['train']), eta_min=3e-6)
-        start_epoch, end_epoch = (0, params['epochs'] - params['scaleup_epochs'])
+        start_epoch, end_epoch = (15, params['epochs'] - params['scaleup_epochs'])
 
         if len(devices.split(',')) > 1:
             model = nn.DataParallel(model)
@@ -177,13 +183,14 @@ def job(tuning, params_path, devices, resume, save_interval):
 
                 if params["loss"] in ["AdditiveMarginSoftmaxLoss"]:
                     outputs, loss = model(x, y)
+                    loss = loss.mean()
                 elif params["loss"] in ["LSoftmax", "arcface", "cosface"]:
                     outputs = model(x, y)
                     loss = criterion(outputs, y)
                 elif params["loss"] in ["Softmax"]:
                     outputs = model(x)
                     loss = criterion(outputs, y)
-
+                break
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
@@ -196,6 +203,7 @@ def job(tuning, params_path, devices, resume, save_interval):
                 if i % 100 == 99:
                     logger.info(f'{epoch + i / len(data_loaders["train"]):.2f}epoch | {setting} acc: {prec1.avg}')
 
+            break
             train_loss = losses.avg
             train_acc = prec1.avg
 

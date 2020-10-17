@@ -40,10 +40,10 @@ class AdMSoftmaxLoss(nn.Module):
 
         wf = self.fc(x)
         numerator = self.s * (torch.diagonal(wf.transpose(0, 1)[labels]) - self.m)
-        excl = torch.cat([torch.cat((wf[i, :y], wf[i, y + 1:])).unsqueeze(0) for i, y in enumerate(labels)], dim=0)
-        denominator = torch.exp(numerator) + torch.sum(torch.exp(self.s * excl), dim=1)
-        L = numerator - torch.log(denominator)
-        return wf, -torch.mean(L)
+        excl = torch.cat([torch.cat((wf[i, :y], wf[i, y + 1:])).cpu().unsqueeze(0) for i, y in enumerate(labels)], dim=0)
+        denominator = torch.exp(numerator.cpu()) + torch.sum(torch.exp(self.s * excl), dim=1)
+        L = numerator.cpu() - torch.log(denominator)
+        return wf, -torch.mean(L.cuda())
 
 
 class LSoftmaxLinear(nn.Module):
@@ -72,16 +72,16 @@ class LSoftmaxLinear(nn.Module):
 
     def calculate_cos_m_theta(self, cos_theta):
         sin2_theta = 1 - cos_theta ** 2
-        cos_terms = cos_theta.unsqueeze(1) ** self.cos_powers.unsqueeze(0)  # cos^{m - 2n}
-        sin2_terms = (sin2_theta.unsqueeze(1)  # sin2^{n}
-                      ** self.sin2_powers.unsqueeze(0))
+        cos_terms = cos_theta.cpu().unsqueeze(1) ** self.cos_powers.cpu().unsqueeze(0)  # cos^{m - 2n}
+        sin2_terms = (sin2_theta.cpu().unsqueeze(1)  # sin2^{n}
+                      ** self.sin2_powers.cpu().unsqueeze(0))
 
-        cos_m_theta = (self.signs.unsqueeze(0) *  # -1^{n} * C_m{2n} * cos^{m - 2n} * sin2^{n}
-                       self.C_m_2n.unsqueeze(0) *
+        cos_m_theta = (self.signs.cpu().unsqueeze(0) *  # -1^{n} * C_m{2n} * cos^{m - 2n} * sin2^{n}
+                       self.C_m_2n.cpu().unsqueeze(0) *
                        cos_terms *
                        sin2_terms).sum(1)  # summation of all terms
 
-        return cos_m_theta
+        return cos_m_theta.cuda()
 
     def reset_parameters(self):
         nn.init.kaiming_normal_(self.weight.data.t())
