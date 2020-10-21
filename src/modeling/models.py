@@ -10,6 +10,46 @@ import cirtorch
 ROOT = '../'
 
 
+class AttentionModel(nn.Module):
+
+    def __init__(self, num_features_in, feature_size=256):
+        super(AttentionModel, self).__init__()
+
+        self.conv1 = nn.Conv2d(num_features_in, feature_size, kernel_size=3, padding=1)
+        self.act1 = nn.ReLU()
+
+        self.conv2 = nn.Conv2d(feature_size, feature_size, kernel_size=3, padding=1)
+        self.act2 = nn.ReLU()
+
+        self.conv3 = nn.Conv2d(feature_size, feature_size, kernel_size=3, padding=1)
+        self.act3 = nn.ReLU()
+
+        self.conv4 = nn.Conv2d(feature_size, feature_size, kernel_size=3, padding=1)
+        self.act4 = nn.ReLU()
+
+        self.conv5 = nn.Conv2d(feature_size, 1, kernel_size=3, padding=1)
+
+        self.output_act = nn.Sigmoid()
+
+    def forward(self, x):
+        out = self.conv1(x)
+        out = self.act1(out)
+
+        out = self.conv2(out)
+        out = self.act2(out)
+
+        out = self.conv3(out)
+        out = self.act3(out)
+
+        out = self.conv4(out)
+        out = self.act4(out)
+
+        out = self.conv5(out)
+        out_attention = self.output_act(out)
+
+        return out_attention
+
+
 class LandmarkNet(nn.Module):
     DIVIDABLE_BY = 32
 
@@ -41,6 +81,14 @@ class LandmarkNet(nn.Module):
         self.backbone = nn.Sequential(*list(self.backbone.children())[:-2])
         # TODO:CompactBilinearPooling
         self.pooling = getattr(cirtorch.pooling, pooling)(**args_pooling)
+
+        self.layer1 = nn.Sequential(*list(self.backbone.children())[:5])
+        self.layer2 = nn.Sequential(*list(self.backbone.children())[5:6])
+        self.layer3 = nn.Sequential(*list(self.backbone.children())[6:7])
+        self.layer4 = nn.Sequential(*list(self.backbone.children())[7:8])
+        self.attention1 = AttentionModel(256)
+        self.attention2 = AttentionModel(512)
+        self.attention3 = AttentionModel(1024)
 
         self.use_fc = use_fc
         if use_fc:
@@ -87,7 +135,18 @@ class LandmarkNet(nn.Module):
 
     def extract_feat(self, x):
         batch_size = x.shape[0]
-        x = self.backbone(x)
+
+        x = self.layer1(x)
+        att = self.attention1(x)
+        x = x * torch.exp(att)
+        x = self.layer2(x)
+        att = self.attention2(x)
+        x = x * torch.exp(att)
+        x = self.layer3(x)
+        att = self.attention3(x)
+        x = x * torch.exp(att)
+        x = self.layer4(x)
+
         x = self.pooling(x).view(batch_size, -1)
 
         if self.use_fc:
