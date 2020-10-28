@@ -1,6 +1,6 @@
 # ENGN8501 Advcaned Computer Vision Final Project - Group 24
 # Google Landmark Challenge 2020
-![](img\Banner.png)<br>
+![](https://cloud.google.com/vision/docs/images/moscow.png?hl=it)<br>
 ### Train:
 * Download the 2020 Dataset, this is also known as GLDv2-Clean Dataset:https://www.kaggle.com/c/landmark-recognition-2020/data. The file downloaded is a zipped file at 97.6GB, so during the unzipping process it will take 2 times the space at most. Make sure you have enough space on your disk.
 * Clone this repo
