@@ -6,6 +6,7 @@ from tqdm import tqdm
 from src import dataset_connector
 
 
+
 def generate_size_info_df(paths, df) -> pd.DataFrame:
     for path in tqdm(list(paths)):
         id_ = str(path).split('/')[-1].replace('.jpg', '')
