@@ -5,6 +5,9 @@ from .metric_learning import *
 
 
 class Attention(nn.Module):
+    # Spatial attention mechanism
+    # Reference: Implement attention mechanism from
+    # https://github.com/rainofmine/Face_Attention_Network/blob/master/model_level_attention.py
 
     def __init__(self, num_features_in, feature_size=256):
         super(Attention, self).__init__()
