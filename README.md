@@ -71,3 +71,4 @@ Ranked in alphabetical order, with equal contribution.
 2. Implement Large-margin Softmax(L-Softmax) from https://github.com/amirhfarzaneh/lsoftmax-pytorch/blob/master/lsoftmax.py.
 3. Implement Arcface loss function from https://github.com/ronghuaiyang/arcface-pytorch/blob/master/models/metrics.py.
 4. Implement Cosface loss function from https://github.com/lyakaap/Landmark2019-1st-and-3rd-Place-Solution/blob/master/src/modeling/metric_learning.py.
+5. Implement Spatial attention mechanism from https://github.com/rainofmine/Face_Attention_Network/blob/master/model_level_attention.py
