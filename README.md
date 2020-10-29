@@ -66,3 +66,8 @@ Ranked in alphabetical order, with equal contribution.
 * Yijian Fan<br>
 * Yufeng Fang<br>
 
+### Reference lists:
+1. Implement Additive Margin Softmax Loss from https://github.com/Leethony/Additive-Margin-Softmax-Loss-Pytorch.
+2. Implement Large-margin Softmax(L-Softmax) from https://github.com/amirhfarzaneh/lsoftmax-pytorch/blob/master/lsoftmax.py.
+3. Implement Arcface loss function from https://github.com/ronghuaiyang/arcface-pytorch/blob/master/models/metrics.py.
+4. Implement Cosface loss function from https://github.com/lyakaap/Landmark2019-1st-and-3rd-Place-Solution/blob/master/src/modeling/metric_learning.py.
