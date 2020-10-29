@@ -4,10 +4,10 @@ import extra.cirtorch as cirtorch
 from .metric_learning import *
 
 
-class AttentionModel(nn.Module):
+class Attention(nn.Module):
 
     def __init__(self, num_features_in, feature_size=256):
-        super(AttentionModel, self).__init__()
+        super(Attention, self).__init__()
 
         self.conv1 = nn.Conv2d(num_features_in, feature_size, kernel_size=3, padding=1)
         self.act1 = nn.ReLU()
@@ -80,9 +80,9 @@ class LandmarkNet(nn.Module):
         self.layer2 = nn.Sequential(*list(self.backbone.children())[5:6])
         self.layer3 = nn.Sequential(*list(self.backbone.children())[6:7])
         self.layer4 = nn.Sequential(*list(self.backbone.children())[7:8])
-        self.attention1 = AttentionModel(256)
-        self.attention2 = AttentionModel(512)
-        self.attention3 = AttentionModel(1024)
+        self.attention1 = Attention(256)
+        self.attention2 = Attention(512)
+        self.attention3 = Attention(1024)
 
         self.use_fc = use_fc
         if use_fc:
