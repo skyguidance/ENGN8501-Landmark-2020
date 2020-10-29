@@ -94,16 +94,26 @@ class LandmarkNet(nn.Module):
 
         self.loss_module = loss_module
         if loss_module == 'arcface':
+            # Arcface Loss function
+            # Reference: Implement the arcface loss function from
+            # https://github.com/ronghuaiyang/arcface-pytorch/blob/master/models/metrics.py
             self.final = ArcMarginProduct(final_in_features, n_classes,
                                           s=s, m=margin, easy_margin=False, ls_eps=ls_eps)
         elif loss_module == 'cosface':
+            # Cosface loss function
+            # Reference: Implement cosface loss function from
+            # https://github.com/lyakaap/Landmark2019-1st-and-3rd-Place-Solution/blob/master/src/modeling/metric_learning.py
             self.final = AddMarginProduct(final_in_features, n_classes, s=s, m=margin)
-        elif loss_module == 'adacos':
-            self.final = AdaCos(final_in_features, n_classes, m=margin, theta_zero=theta_zero)
         # New by Group
         elif loss_module == "AdditiveMarginSoftmaxLoss":
+            # Additive Margin Softmax Loss
+            # Reference: The Additive Margin Softmax Loss was implemented from
+            # https://github.com/Leethony/Additive-Margin-Softmax-Loss-Pytorch
             self.final = AdMSoftmaxLoss(final_in_features, n_classes, s=s, m=margin)
         elif loss_module == "LSoftmax":
+            # Large-margin Softmax(L-Softmax)
+            # Reference: The Large-margin Softmax(L-Softmax) was implemented from
+            # https://github.com/amirhfarzaneh/lsoftmax-pytorch/blob/master/lsoftmax.py
             self.final = LSoftmaxLinear(final_in_features, n_classes, margin=2)
         elif loss_module == "Softmax":
             self.final = nn.Linear(final_in_features, n_classes)
