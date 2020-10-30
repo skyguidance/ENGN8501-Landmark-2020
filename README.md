@@ -1,4 +1,4 @@
-# ENGN8501 Advcaned Computer Vision Final Project - Group 24
+# ENGN8501 Advanced Computer Vision Final Project - Group 24
 # Google Landmark Challenge 2020
 ![](https://cloud.google.com/vision/docs/images/moscow.png?hl=it)<br>
 ### Train:
