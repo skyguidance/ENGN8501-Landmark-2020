@@ -47,15 +47,6 @@ python train.py --devices "0,1,2,......."
 ```
 python predict.py --devices "0" --model-path "/your/path/to/your/model/pth/file"
 ```
-### Pretrained Models:
-Pure Arcface Model:
-
-https://engn8501.ap-south-1.linodeobjects.com/Epoch29_arcface.pth
-
-Arcface + Attention Model:
-
-https://engn8501.ap-south-1.linodeobjects.com/ep29_Attention_Arcface.pth
-
 
 ### Collaborators:
 Ranked in alphabetical order, with equal contribution.
